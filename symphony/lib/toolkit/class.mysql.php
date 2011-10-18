@@ -424,9 +424,12 @@
 		 * @return boolean
 		 *  True if the query executed without errors, false otherwise
 		 */
-		public function query($query, $type = "OBJECT"){
+		public function query($query, $type = "OBJECT", $params = array()){
 
-			if(empty($query) || self::isConnected() === false) return false;
+			if(empty($query) || $this->isConnected() === false) return false;
+			self::cleanFields($params);
+			
+			$query = vsprintf($query, $params);
 
 			$start = precision_timer();
 			$query = trim($query);
