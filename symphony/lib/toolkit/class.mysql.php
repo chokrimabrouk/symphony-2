@@ -666,6 +666,11 @@
 		 * @param string $query
 		 *  The full SQL query to execute. Defaults to null, which will
 		 *  use the _lastResult
+		 * @param array $params
+		 *  An array containing parameters to be used in the query. The query has to be
+		 *  sprintf-formatted. All values will be sanitized before being used in the query.
+		 *  For sake of backwards-compatibility, the query will only be sprintf-processed
+		 *  if $params is not empty.
 		 * @param string $index_by_column
 		 *  The name of a column in the table to use it's value to index
 		 *  the result by. If this is omitted (and it is by default), an
@@ -711,6 +716,11 @@
 		 * @param string $query
 		 *  The full SQL query to execute. Defaults to null, which will
 		 *  use the `$this->_lastResult`
+		 * @param array $params
+		 *  An array containing parameters to be used in the query. The query has to be
+		 *  sprintf-formatted. All values will be sanitized before being used in the query.
+		 *  For sake of backwards-compatibility, the query will only be sprintf-processed
+		 *  if $params is not empty.
 		 * @return array
 		 *  If there is no row at the specified `$offset`, an empty array will be returned
 		 *  otherwise an associative array of that row will be returned.
@@ -729,6 +739,11 @@
 		 * @param string $query
 		 *  The full SQL query to execute. Defaults to null, which will
 		 *  use the `$this->_lastResult`
+		 * @param array $params
+		 *  An array containing parameters to be used in the query. The query has to be
+		 *  sprintf-formatted. All values will be sanitized before being used in the query.
+		 *  For sake of backwards-compatibility, the query will only be sprintf-processed
+		 *  if $params is not empty.
 		 * @return array
 		 *  If there is no results for the `$query`, an empty array will be returned
 		 *  otherwise an array of values for that given `$column` will be returned
@@ -759,7 +774,12 @@
 		 * @param string $query
 		 *  The full SQL query to execute. Defaults to null, which will
 		 *  use the `$this->_lastResult`
-		 * @return string|null
+		 * @param array $params
+		 *  An array containing parameters to be used in the query. The query has to be
+		 *  sprintf-formatted. All values will be sanitized before being used in the query.
+		 *  For sake of backwards-compatibility, the query will only be sprintf-processed
+		 *  if $params is not empty.
+		 * @return string
 		 *  Returns the value of the given column, if it doesn't exist, null will be
 		 *  returned
 		 */
