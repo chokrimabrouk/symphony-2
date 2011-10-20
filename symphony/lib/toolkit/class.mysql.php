@@ -424,7 +424,7 @@
 		 * @return boolean
 		 *  True if the query executed without errors, false otherwise
 		 */
-		public function query($query, $type = "OBJECT", $params = array()){
+		public function query($query, $params = array(), $type = "OBJECT"){
 
 			if(empty($query) || $this->isConnected() === false) return false;
 			self::cleanFields($params);
@@ -663,7 +663,7 @@
 		 */
 		public function fetch($query = null, $index_by_column = null){
 			if(!is_null($query)) {
-				$this->query($query, "ASSOC");
+				$this->query($query, array(), "ASSOC");
 			}
 			else if(is_null($this->_lastResult)) {
 				return array();
