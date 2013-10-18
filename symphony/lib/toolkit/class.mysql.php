@@ -7,58 +7,6 @@
 	 */
 
 	/**
-	 * The DatabaseException class extends a normal Exception to add in
-	 * debugging information when a SQL query fails such as the internal
-	 * database error code and message in additional to the usual
-	 * Exception information. It allows a DatabaseException to contain a human
-	 * readable error, as well more technical information for debugging.
-	 */
-	Class DatabaseException extends Exception{
-
-		/**
-		 * An associative array with three keys, 'query', 'msg' and 'num'
-		 * @var array
-		 */
-		private $_error = array();
-
-		/**
-		 * Constructor takes a message and an associative array to set to
-		 * `$_error`. The message is passed to the default Exception constructor
-		 */
-		public function __construct($message, array $error=NULL){
-			parent::__construct($message);
-			$this->_error = $error;
-		}
-
-		/**
-		 * Accessor function for the original query that caused this Exception
-		 *
-		 * @return string
-		 */
-		public function getQuery(){
-			return $this->_error['query'];
-		}
-
-		/**
-		 * Accessor function for the Database error code for this type of error
-		 *
-		 * @return string
-		 */
-		public function getDatabaseErrorCode(){
-			return $this->_error['num'];
-		}
-
-		/**
-		 * Accessor function for the Database message from this Exception
-		 *
-		 * @return string
-		 */
-		public function getDatabaseErrorMessage(){
-			return $this->_error['msg'];
-		}
-	}
-
-	/**
 	 * The MySQL class acts as a wrapper for connecting to the Database
 	 * in Symphony. It utilises mysqli_* functions in PHP to complete the usual
 	 * querying. As well as the normal set of insert, update, delete and query
@@ -91,9 +39,9 @@
 		 * database including the host, port, username, password and
 		 * selected database.
 		 *
-		 * @var array
+		 * @var PDO
 		 */
-		private static $_conn_pdo = array();
+		private static $_conn_pdo = null;
 
 		/**
 		 * Sets the current `$_log` to be an empty array
@@ -140,19 +88,7 @@
 		 * @return boolean
 		 */
 		public function isConnected(){
-			return (isset(MySQL::$_connection['id']) && !is_null(MySQL::$_connection['id']));
-		}
-
-		/**
-		 * Called when the script has finished executing, this closes the MySQL
-		 * connection
-		 *
-		 * @return boolean
-		 */
-		public function close(){
-			if($this->isConnected()) return mysqli_close(MySQL::$_connection['id']);
-
-			return true;
+			return isset(MySQL::$_conn_pdo);
 		}
 
 		/**
@@ -170,9 +106,19 @@
 		 * @return boolean
 		 */
 		public function connect($host = null, $user = null, $password = null, $port ='3306', $database = null){
-			$options = array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'");
+			$config = array(
+				'driver' => 'mysql',
+				'db' => $database,
+				'host' => $host,
+				'port' => $port,
+				'user' => $user,
+				'password' => $password,
+				'options' => array(
+					PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"
+				)
+			);
 
-			MySQL::$_conn_pdo = new Database(sprintf('mysql:dbname=%s;host=%s;port=%d', $database, $host, $port), $user, $password, $options);
+			MySQL::$_conn_pdo = new Database($config);
 
 			return true;
 		}
@@ -190,20 +136,6 @@
 		}
 
 		/**
-		 * This will set the character encoding of the connection for sending and
-		 * receiving data. This function will run every time the database class
-		 * is being initialized. If no character encoding is provided, UTF-8
-		 * is assumed.
-		 *
-		 * @link http://au2.php.net/manual/en/function.mysql-set-charset.php
-		 * @param string $set
-		 *  The character encoding to use, by default this 'utf8'
-		 */
-		public function setCharacterEncoding($set='utf8'){
-
-		}
-
-		/**
 		 * This function will set the character encoding of the database so that any
 		 * new tables that are created by Symphony use this character encoding
 		 *
@@ -212,7 +144,8 @@
 		 *  The character encoding to use, by default this 'utf8'
 		 */
 		public function setCharacterSet($set='utf8'){
-			
+			$this->query("SET character_set_connection = '$set', character_set_database = '$set', character_set_server = '$set'");
+			$this->query("SET CHARACTER SET '$set'");
 		}
 
 		/**
@@ -291,11 +224,6 @@
 		 * @uses PostQueryExecution
 		 * @param string $query
 		 *  The full SQL query to execute.
-		 * @param array $params
-		 *  An array containing parameters to be used in the query. The query has to be
-		 *  sprintf-formatted. All values will be sanitized before being used in the query.
-		 *  For sake of backwards-compatibility, the query will only be sprintf-processed
-		 *  if $params is not empty.
 		 * @param string $type
 		 *  Whether to return the result as objects or associative array. Defaults
 		 *  to OBJECT which will return objects. The other option is ASSOC. If $type
@@ -306,7 +234,9 @@
 		public function query($query, $type = "OBJECT"){
 			if(empty($query)) return false;
 
-			$result = MySQL::$_conn_pdo->query($query, $type);
+			$result = MySQL::$_conn_pdo->query($query, array(
+				'fetch-type' => $type
+			));
 
 			return true;
 		}
@@ -402,15 +332,15 @@
 		 * @return boolean
 		 */
 		public function update($fields, $table, $where = null) {
-			self::cleanFields($fields);
-			$sql = "UPDATE $table SET ";
+			$sql = "UPDATE `$table` SET ";
 
-			foreach($fields as $key => $val)
-				$rows[] = " `$key` = $val";
+			foreach($fields as $key => $val) {
+				$sql .= " `$key` = ?,";
+			}
 
-			$sql .= implode(', ', $rows) . (!is_null($where) ? ' WHERE ' . $where : null);
+			$sql = trim($sql, ',') . (!is_null($where) ? ' WHERE ' . $where : null);
 
-			return $this->query($sql);
+			return MySQL::$_conn_pdo->update($sql, array_values($fields));
 		}
 
 		/**
@@ -453,16 +383,15 @@
 		 *  the result by. If this is omitted (and it is by default), an
 		 *  array of associative arrays is returned, with the key being the
 		 *  column names
-		 * @param array $params
-		 *  An array containing parameters to be used in the query. The query has to be
-		 *  sprintf-formatted. All values will be sanitized before being used in the query.
-		 *  For sake of backwards-compatibility, the query will only be sprintf-processed
-		 *  if $params is not empty.
 		 * @return array
 		 *  An associative array with the column names as the keys
 		 */
 		public function fetch($query = null, $index_by_column = null, $params = array()){
-			return MySQL::$_conn_pdo->fetch($query, $index_by_column, $params);
+			if(!is_null($index_by_column)) {
+				$params['index'] = $index_by_column;
+			}
+			
+			return MySQL::$_conn_pdo->fetch($query, $params);
 		}
 
 		/**
@@ -479,11 +408,6 @@
 		 * @param string $query
 		 *  The full SQL query to execute. Defaults to null, which will
 		 *  use the `$this->_lastResult`
-		 * @param array $params
-		 *  An array containing parameters to be used in the query. The query has to be
-		 *  sprintf-formatted. All values will be sanitized before being used in the query.
-		 *  For sake of backwards-compatibility, the query will only be sprintf-processed
-		 *  if $params is not empty.
 		 * @return array
 		 *  If there is no row at the specified `$offset`, an empty array will be returned
 		 *  otherwise an associative array of that row will be returned.
@@ -505,16 +429,11 @@
 		 * @param string $query
 		 *  The full SQL query to execute. Defaults to null, which will
 		 *  use the `$this->_lastResult`
-		 * @param array $params
-		 *  An array containing parameters to be used in the query. The query has to be
-		 *  sprintf-formatted. All values will be sanitized before being used in the query.
-		 *  For sake of backwards-compatibility, the query will only be sprintf-processed
-		 *  if $params is not empty.
 		 * @return array
 		 *  If there is no results for the `$query`, an empty array will be returned
 		 *  otherwise an array of values for that given `$column` will be returned
 		 */
-		public function fetchCol($column, $query = null, $params = array()){
+		public function fetchCol($column, $query = null){
 			$result = $this->fetch($query, $column);
 
 			if(empty($result)) return array();
@@ -601,7 +520,7 @@
 		 *  error codes when the connection sequence fails
 		 */
 		private function __error() {
-			MySQL::$_conn_pdo->error();
+			return MySQL::$_conn_pdo->error();
 		}
 
 		/**
@@ -617,9 +536,7 @@
 		 *  to run
 		 */
 		public function debug($type = null){
-			if(!$type) return MySQL::$_conn_pdo->_log;
-
-			return ($type == 'error' ? MySQL::$_conn_pdo->_log['error'] : MySQL::$_conn_pdo->_log['query']);
+			return MySQL::$_conn_pdo->debug();
 		}
 
 		/**
@@ -633,20 +550,7 @@
 		 *  queries and the total query time.
 		 */
 		public function getStatistics() {
-			$stats = array();
-			$query_timer = 0.0;
-			$slow_queries = array();
-
-			foreach(MySQL::$_conn_pdo->_log as $key => $val) {
-				$query_timer += $val['execution_time'];
-				if($val['execution_time'] > 0.0999) $slow_queries[] = $val;
-			}
-
-			return array(
-				'queries' => MySQL::queryCount(),
-				'slow-queries' => $slow_queries,
-				'total-query-time' => number_format($query_timer, 4, '.', '')
-			);
+			return MySQL::$_conn_pdo->getStatistics();
 		}
 
 		/**
