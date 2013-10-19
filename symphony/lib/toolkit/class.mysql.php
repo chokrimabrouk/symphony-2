@@ -106,7 +106,9 @@
 		 * @return boolean
 		 */
 		public function connect($host = null, $user = null, $password = null, $port ='3306', $database = null){
-			$options = array();
+			$options = array(
+				PDO::ATTR_ORACLE_NULLS => PDO::NULL_EMPTY_STRING
+			);
 			$config = array(
 				'driver' => 'mysql',
 				'db' => $database,
@@ -153,7 +155,7 @@
 		public function setTimeZone($timezone = null) {
 			if(is_null($timezone)) return;
 
-			$this->query("SET time_zone = '$timezone'");
+			self::getConnectionResource()->exec("SET time_zone = '$timezone'");
 		}
 
 		/**
@@ -332,7 +334,7 @@
 
 			$sql = trim($sql, ',') . (!is_null($where) ? ' WHERE ' . $where : null);
 
-			return MySQL::$_conn_pdo->update($sql, array_values($fields), $params);
+			return MySQL::$_conn_pdo->update($sql, array_merge(array_values($fields), $params));
 		}
 
 		/**
@@ -347,14 +349,14 @@
 		 *  which will delete all rows in the $table
 		 * @return boolean
 		 */
-		public function delete($table, $where = null){
+		public function delete($table, $where = null, array $params = array()) {
 			$sql = "DELETE FROM $table";
 
 			if (!is_null($where)) {
 				$sql .= " WHERE $where";
 			}
 
-			return $this->query($sql);
+			return MySQL::$_conn_pdo->delete($sql, $params);
 		}
 
 		/**
