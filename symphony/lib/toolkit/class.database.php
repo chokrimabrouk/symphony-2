@@ -273,13 +273,13 @@
 				? self::__WRITE_OPERATION__
 				: self::__READ_OPERATION__);
 		}
-		
+
 		public static function addPlaceholders(array $values = array()) {
 			$placeholders = null;
 			if(!empty($values)) {
 				$placeholders = str_repeat('?,', count($values) - 1) . '?';
 			}
-			
+
 			return $placeholders;
 		}
 
@@ -321,7 +321,7 @@
 
 			return $result;
 		}
-		
+
 		/**
 		 * Given a query that has been prepared and an array of values to subsitute
 		 * into the query, the function will return the result.

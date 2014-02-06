@@ -74,7 +74,7 @@
 
 		/**
 		 * Returns the prefix used by Symphony for this Database instance.
-		 * 
+		 *
 		 * @since Symphony 2.4
 		 * @return string
 		 */
@@ -89,6 +89,35 @@
 		 */
 		public function isConnected(){
 			return isset(MySQL::$_conn_pdo);
+		}
+
+		/**
+		 * Sets query caching to true, this will prepend all READ_OPERATION
+		 * queries with SQL_CACHE. Symphony be default enables caching. It
+		 * can be turned off by setting the query_cache parameter to 'off' in the
+		 * Symphony config file.
+		 *
+		 * @link http://dev.mysql.com/doc/refman/5.1/en/query-cache.html
+		 */
+		public function enableCaching(){
+			MySQL::$_conn_pdo->enableCaching();
+		}
+
+		/**
+		 * Sets query caching to false, this will prepend all READ_OPERATION
+		 * queries will SQL_NO_CACHE.
+		 */
+		public function disableCaching(){
+			MySQL::$_conn_pdo->disableCaching();
+		}
+
+		/**
+		 * Returns boolean if query caching is enabled or not
+		 *
+		 * @return boolean
+		 */
+		public function isCachingEnabled(){
+			return MySQL::$_conn_pdo->isCachingEnabled();
 		}
 
 		/**
@@ -170,11 +199,7 @@
 		 *  The escaped SQL string
 		 */
 		public static function cleanValue($value) {
-			if (function_exists('mysqli_real_escape_string')) {
-				return mysqli_real_escape_string(MySQL::$_connection['id'], $value);
-			} else {
-				return addslashes($value);
-			}
+			return addslashes($value);
 		}
 
 		/**
