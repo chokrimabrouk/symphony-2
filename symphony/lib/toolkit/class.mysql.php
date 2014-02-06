@@ -74,7 +74,7 @@
 
 		/**
 		 * Returns the prefix used by Symphony for this Database instance.
-		 *
+		 * 
 		 * @since Symphony 2.4
 		 * @return string
 		 */
@@ -90,7 +90,7 @@
 		public function isConnected(){
 			return isset(MySQL::$_conn_pdo);
 		}
-
+		
 		/**
 		 * Sets query caching to true, this will prepend all READ_OPERATION
 		 * queries with SQL_CACHE. Symphony be default enables caching. It
